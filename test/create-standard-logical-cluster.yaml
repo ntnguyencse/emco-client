@@ -1,0 +1,41 @@
+---
+#create privileged logical cloud
+version: emco/v2
+resourceContext:
+  anchor: projects/project1/logical-clouds
+metadata:
+  name: logicalCloud1
+spec:
+  namespace: test-ns
+  user:
+    userName: user-1
+    type: certificate
+
+---
+#add primary user permission (only one that is allowed in standard logical clouds)
+version: emco/v2
+resourceContext:
+  anchor: projects/project1/logical-clouds/logicalCloud1/user-permissions
+metadata:
+    name: permission1
+spec:
+    namespace: test-ns
+    apiGroups:
+    - "*"
+    resources:
+    - "*"
+    verbs:
+    - "*"
+
+---
+#add cluster reference to logical cloud
+version: emco/v2
+resourceContext:
+  anchor: projects/project1/logical-clouds/logicalCloud1/cluster-references
+metadata:
+  name: clusterRef1
+spec:
+  clusterProvider: provider1
+  cluster: cluster1
+  loadbalancerIp: "0.0.0.0"
+
