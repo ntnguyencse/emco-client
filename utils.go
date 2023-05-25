@@ -34,6 +34,8 @@ var token []string
 var stopFlag bool
 var acceptWaitTime int
 
+var outputRespone resty.Response
+
 type ResourceContext struct {
 	Anchor string `json:"anchor" yaml:"anchor"`
 }
@@ -90,6 +92,11 @@ func newGrpcClient(endpoint string) (*grpc.ClientConn, error) {
 	}
 
 	return conn, err
+}
+
+// Get ouput of output func
+func GetResponseOutput() resty.Response {
+	return outputRespone
 }
 
 // RestyClient to use with CLI
@@ -194,17 +201,17 @@ func readResources() []Resources {
 }
 
 // RestClientApply to post to server no multipart
-func (r RestyClient) RestClientApply(anchor string, body []byte, put bool) error {
+func (r RestyClient) RestClientApply(anchor string, body []byte, put bool) (*resty.Response, error) {
 	var resp *resty.Response
 	var err error
 	var url string
 
 	if put {
 		if anchor, err = getUpdateUrl(anchor, body); err != nil {
-			return err
+			return resp, err
 		}
 		if url, err = GetURL(anchor); err != nil {
-			return err
+			return resp, err
 		}
 		// Put JSON string
 		resp, err = r.client.R().
@@ -213,7 +220,7 @@ func (r RestyClient) RestClientApply(anchor string, body []byte, put bool) error
 			Put(url)
 	} else {
 		if url, err = GetURL(anchor); err != nil {
-			return err
+			return resp, err
 		}
 		// Post JSON string
 		resp, err = r.client.R().
@@ -223,7 +230,7 @@ func (r RestyClient) RestClientApply(anchor string, body []byte, put bool) error
 	}
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return resp, err
 	}
 	if put {
 		printOutput(url, "PUT", resp)
@@ -236,27 +243,27 @@ func (r RestyClient) RestClientApply(anchor string, body []byte, put bool) error
 			fmt.Println("API Response code 202. Waiting...")
 			time.Sleep(time.Duration(acceptWaitTime) * time.Second)
 		}
-		return nil
+		return resp, nil
 	}
-	return pkgerrors.Errorf("API Error")
+	return resp, pkgerrors.Errorf("API Error")
 }
 
 // RestClientPut to post to server no multipart
-func (r RestyClient) RestClientPut(anchor string, body []byte) error {
+func (r RestyClient) RestClientPut(anchor string, body []byte) (*resty.Response, error) {
 	if anchor == "" {
-		return pkgerrors.Errorf("Anchor can't be empty")
+		return nil, pkgerrors.Errorf("Anchor can't be empty")
 	}
 	s := strings.Split(anchor, "/")
 	a := s[len(s)-1]
 	if a == "instantiate" || a == "apply" || a == "approve" || a == "terminate" || a == "migrate" || a == "update" || a == "rollback" {
 		// No put for these
-		return nil
+		return nil, nil
 	}
 	return r.RestClientApply(anchor, body, true)
 }
 
 // RestClientPost to post to server no multipart
-func (r RestyClient) RestClientPost(anchor string, body []byte) error {
+func (r RestyClient) RestClientPost(anchor string, body []byte) (*resty.Response, error) {
 	return r.RestClientApply(anchor, body, false)
 }
 
@@ -342,7 +349,7 @@ func getFile(file string) ([]byte, string, error) {
 }
 
 // RestClientMultipartApplyMultipleFiles to post to server with multipart
-func (r RestyClient) RestClientMultipartApplyMultipleFiles(anchor string, body []byte, files []string, put bool) error {
+func (r RestyClient) RestClientMultipartApplyMultipleFiles(anchor string, body []byte, files []string, put bool) (*resty.Response, error) {
 	var f []byte
 	var name string
 	var err error
@@ -357,24 +364,24 @@ func (r RestyClient) RestClientMultipartApplyMultipleFiles(anchor string, body [
 	for _, file := range files {
 		f, name, err = getFile(file)
 		if err != nil {
-			return err
+			return resp, err
 		}
 		req = req.
 			SetFileReader("files", name, bytes.NewReader(f))
 	}
 	if put {
 		if anchor, err = getUpdateUrl(anchor, body); err != nil {
-			return err
+			return resp, err
 		}
 		if url, err = GetURL(anchor); err != nil {
-			return err
+			return resp, err
 		}
 		resp, err = req.
 			SetFormDataFromValues(formParams).
 			Put(url)
 	} else {
 		if url, err = GetURL(anchor); err != nil {
-			return err
+			return resp, err
 		}
 		resp, err = req.
 			SetFormDataFromValues(formParams).
@@ -382,7 +389,7 @@ func (r RestyClient) RestClientMultipartApplyMultipleFiles(anchor string, body [
 	}
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return resp, err
 	}
 	if put {
 		printOutput(url, "PUT", resp)
@@ -396,18 +403,18 @@ func (r RestyClient) RestClientMultipartApplyMultipleFiles(anchor string, body [
 			time.Sleep(time.Duration(acceptWaitTime) * time.Second)
 
 		}
-		return nil
+		return resp, nil
 	}
-	return pkgerrors.Errorf("API Error")
+	return resp, pkgerrors.Errorf("API Error")
 }
 
 // RestClientMultipartPutMultipleFiles to post to server with multipart
-func (r RestyClient) RestClientMultipartPutMultipleFiles(anchor string, body []byte, files []string) error {
+func (r RestyClient) RestClientMultipartPutMultipleFiles(anchor string, body []byte, files []string) (*resty.Response, error) {
 	return r.RestClientMultipartApplyMultipleFiles(anchor, body, files, true)
 }
 
 // RestClientMultipartPostMultipleFiles to post to server with multipart
-func (r RestyClient) RestClientMultipartPostMultipleFiles(anchor string, body []byte, files []string) error {
+func (r RestyClient) RestClientMultipartPostMultipleFiles(anchor string, body []byte, files []string) (*resty.Response, error) {
 	return r.RestClientMultipartApplyMultipleFiles(anchor, body, files, false)
 }
 
@@ -490,26 +497,26 @@ func (r RestyClient) RestClientGet(anchor string, body []byte) error {
 }
 
 // RestClientDeleteAnchor returns all resource in the input file
-func (r RestyClient) RestClientDeleteAnchor(anchor string) error {
+func (r RestyClient) RestClientDeleteAnchor(anchor string) (*resty.Response, error) {
 	url, err := GetURL(anchor)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	resp, err := r.client.R().Delete(url)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return nil, err
 	}
 	printOutput(url, "DELETE", resp)
 	if resp.StatusCode() >= 200 && resp.StatusCode() <= 299 {
-		return nil
+		return resp, nil
 	} else {
-		return pkgerrors.Errorf("API Error")
+		return resp, pkgerrors.Errorf("API Error")
 	}
 }
 
 // RestClientDelete calls rest delete command
-func (r RestyClient) RestClientDelete(anchor string, body []byte) error {
+func (r RestyClient) RestClientDelete(anchor string, body []byte) (*resty.Response, error) {
 
 	s := strings.Split(anchor, "/")
 	a := s[len(s)-1]
@@ -525,13 +532,13 @@ func (r RestyClient) RestClientDelete(anchor string, body []byte) error {
 		return r.RestClientPost(anchor, []byte{})
 	} else if a == "approve" || a == "status" || a == "migrate" || a == "update" || a == "rollback" {
 		// No delete required for these
-		return nil
+		return nil, nil
 	}
 	var e emcoBody
 	err := json.Unmarshal(body, &e)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return nil, err
 	}
 	if e.Meta.Name != "" {
 		s := strings.Split(anchor, "/")
@@ -543,7 +550,7 @@ func (r RestyClient) RestClientDelete(anchor string, body []byte) error {
 			err := mapstructure.Decode(e.Spec, &cav)
 			if err != nil {
 				fmt.Println("Unable to decode CompositeApp Spec")
-				return err
+				return nil, err
 			}
 			anchor = anchor + "/" + cav.CompositeAppVersion
 		}
@@ -789,6 +796,8 @@ func printOutput(url, op string, resp *resty.Response) {
 	if len(resp.Body()) > 0 {
 		fmt.Println("Response:", resp)
 	}
+	outputRespone = *resp
+
 }
 
 func HandleError(err error, op string, anchor string) bool {

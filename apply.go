@@ -29,12 +29,12 @@ var applyCmd = &cobra.Command{
 						return
 					}
 				} else if len(res.files) > 0 {
-					err := c.RestClientMultipartPostMultipleFiles(res.anchor, res.body, res.files)
+					_, err := c.RestClientMultipartPostMultipleFiles(res.anchor, res.body, res.files)
 					if HandleError(err, "Apply: ", res.anchor) {
 						return
 					}
 				} else {
-					err := c.RestClientPost(res.anchor, res.body)
+					_, err := c.RestClientPost(res.anchor, res.body)
 					if HandleError(err, "Apply: ", res.anchor) {
 						return
 					}

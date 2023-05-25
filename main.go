@@ -11,9 +11,15 @@ const (
 func main() {
 	fmt.Println("Beginning of Cmd")
 	fmt.Println("Execute the cmd")
-	cfgFile = config
+	// cfgFile = config
+	SetConfigFilePath(config)
 	args := []string{"apply", "-f", "/home/ubuntu/emco-client/test/register-cluster.yml"}
-	rootCmd.SetArgs(args)
-	rootCmd.DebugFlags()
+	SetArgs(args)
+	// rootCmd.SetArgs(args)
+	// rootCmd.DebugFlags()
+	SetDebugFlags()
 	Execute()
+	resqq := GetResponseOutput()
+	fmt.Println(resqq.StatusCode())
+	fmt.Println(string(resqq.Body()))
 }

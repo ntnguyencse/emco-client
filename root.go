@@ -48,6 +48,9 @@ func SetConfigFilePath(path string) {
 func SetArgs(args []string) {
 	rootCmd.SetArgs(args)
 }
+func SetDebugFlags() {
+	rootCmd.DebugFlags()
+}
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {

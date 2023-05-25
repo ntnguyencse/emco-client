@@ -24,13 +24,16 @@ var deleteCmd = &cobra.Command{
 			resources := readResources()
 			for i := len(resources) - 1; i >= 0; i-- {
 				res := resources[i]
-				err := c.RestClientDelete(res.anchor, res.body)
+				_, err := c.RestClientDelete(res.anchor, res.body)
 				if HandleError(err, "Delete: ", res.anchor) {
 					return
 				}
 			}
 		} else if len(args) >= 1 {
-			c.RestClientDeleteAnchor(args[0])
+			_, err := c.RestClientDeleteAnchor(args[0])
+			if HandleError(err, "Delete: ", args[0]) {
+				return
+			}
 		} else {
 			fmt.Println("Use: 'emcoctl delete --help'")
 		}
