@@ -39,6 +39,16 @@ func init() {
 
 }
 
+// Set Config File Path
+func SetConfigFilePath(path string) {
+	cfgFile = path
+}
+
+// SetArg for root command
+func SetArgs(args []string) {
+	rootCmd.SetArgs(args)
+}
+
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 
